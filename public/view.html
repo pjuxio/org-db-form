@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Organizations - Climate Justice Database</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Climate Justice Organizations</h1>
+            <p class="subtitle">Browse the global network</p>
+        </header>
+
+        <div class="filters">
+            <div class="form-group">
+                <label for="search">Search Organizations</label>
+                <input type="text" id="search" placeholder="Search by name, country, or region...">
+            </div>
+        </div>
+
+        <div id="stats" style="text-align: center; margin-bottom: 20px; font-size: 1.1rem; color: #666;">
+            <span id="org-count">Loading...</span>
+        </div>
+
+        <div id="loading" class="loading">Loading organizations...</div>
+        <div id="org-grid" class="org-grid"></div>
+
+        <div class="form-actions" style="margin-top: 40px;">
+            <a href="index.html" class="btn btn-primary">Add New Organization</a>
+        </div>
+    </div>
+
+    <script src="view.js"></script>
+</body>
+</html>
