@@ -4,7 +4,9 @@ let orgId = null;
 // Check authentication
 async function checkAuth() {
     try {
-        const response = await fetch(`${API_BASE}/api/auth/me`);
+        const response = await fetch(`${API_BASE}/api/auth/me`, {
+            credentials: 'include'
+        });
         const data = await response.json();
         
         if (!data.authenticated) {
@@ -31,7 +33,9 @@ async function loadOrganization() {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/api/organizations/${orgId}`);
+        const response = await fetch(`${API_BASE}/api/organizations/${orgId}`, {
+            credentials: 'include'
+        });
         
         if (!response.ok) {
             throw new Error('Organization not found');
@@ -122,6 +126,7 @@ document.getElementById('orgForm').addEventListener('submit', async (e) => {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify(data)
         });
         

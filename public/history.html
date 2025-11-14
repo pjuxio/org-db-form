@@ -121,7 +121,9 @@
         // Check authentication
         async function checkAuth() {
             try {
-                const response = await fetch(`${API_BASE}/api/auth/me`);
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 
                 if (!data.authenticated) {
@@ -151,12 +153,16 @@
             
             try {
                 // Load organization details
-                const orgResponse = await fetch(`${API_BASE}/api/organizations/${orgId}`);
+                const orgResponse = await fetch(`${API_BASE}/api/organizations/${orgId}`, {
+                    credentials: 'include'
+                });
                 const org = await orgResponse.json();
                 document.getElementById('orgName').textContent = org.Name || 'Unnamed Organization';
                 
                 // Load history
-                const historyResponse = await fetch(`${API_BASE}/api/organizations/${orgId}/history`);
+                const historyResponse = await fetch(`${API_BASE}/api/organizations/${orgId}/history`, {
+                    credentials: 'include'
+                });
                 const history = await historyResponse.json();
                 
                 displayHistory(history);
@@ -246,7 +252,8 @@
             
             try {
                 const response = await fetch(`${API_BASE}/api/organizations/${orgId}/rollback/${version}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    credentials: 'include'
                 });
                 
                 const result = await response.json();

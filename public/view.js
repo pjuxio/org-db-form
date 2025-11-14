@@ -6,7 +6,9 @@ let currentOrg = null;
 // Check authentication status
 async function checkAuth() {
     try {
-        const response = await fetch(`${API_BASE}/api/auth/me`);
+        const response = await fetch(`${API_BASE}/api/auth/me`, {
+            credentials: 'include'
+        });
         const data = await response.json();
         
         const authSection = document.getElementById('authSection');
@@ -32,7 +34,10 @@ async function checkAuth() {
 // Logout function
 async function logout() {
     try {
-        await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
+        await fetch(`${API_BASE}/api/auth/logout`, { 
+            method: 'POST',
+            credentials: 'include'
+        });
         window.location.reload();
     } catch (error) {
         console.error('Logout error:', error);

@@ -64,7 +64,10 @@ const organizationSchema = new mongoose.Schema({
 const Organization = mongoose.model('Organization', organizationSchema);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -80,7 +83,8 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production' // HTTPS only in production
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
 
