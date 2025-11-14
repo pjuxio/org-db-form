@@ -8,10 +8,19 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+// MongoDB Connection with improved options
+const mongoOptions = {
+  serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+  socketTimeoutMS: 45000,
+  family: 4, // Use IPv4, skip trying IPv6
+};
+
+mongoose.connect(process.env.MONGODB_URI, mongoOptions)
   .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err);
+    console.error('Connection string (password hidden):', process.env.MONGODB_URI?.replace(/:[^:@]+@/, ':****@'));
+  });
 
 // Organization Schema
 const organizationSchema = new mongoose.Schema({
