@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "create-user": "node create-user.js"
+    "create-user": "node create-user.js",
+    "reset-password": "node reset-password.js"
   },
   "engines": {
     "node": "18.x"
