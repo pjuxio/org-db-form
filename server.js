@@ -8,6 +8,7 @@ const MongoStore = require('connect-mongo');
 const { v4: uuidv4 } = require('uuid');
 const User = require('./models/User');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
+const { saveVersion, getHistory, getVersion } = require('./utils/history');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -221,6 +222,15 @@ app.post('/api/organizations', async (req, res) => {
     const newOrg = new Organization(orgData);
     await newOrg.save();
     
+    // Save initial version to history
+    await saveVersion(
+      newOrg.ID,
+      'created',
+      newOrg.toObject(),
+      null,
+      req.session?.userEmail || 'anonymous'
+    );
+    
     // Return without MongoDB fields
     const response = newOrg.toObject();
     delete response._id;
@@ -242,6 +252,13 @@ app.post('/api/organizations', async (req, res) => {
 // Update organization (requires authentication)
 app.put('/api/organizations/:id', requireAuth, async (req, res) => {
   try {
+    // Get current version before updating
+    const oldOrg = await Organization.findOne({ ID: req.params.id }).lean();
+    
+    if (!oldOrg) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    
     const updateData = { ...req.body };
     delete updateData.ID; // Don't allow ID changes
     delete updateData._id;
@@ -256,9 +273,14 @@ app.put('/api/organizations/:id', requireAuth, async (req, res) => {
       { new: true, select: '-_id -__v' }
     ).lean();
     
-    if (!org) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
+    // Save version to history
+    await saveVersion(
+      org.ID,
+      'updated',
+      org,
+      oldOrg,
+      req.session.userEmail
+    );
     
     res.json({ 
       success: true, 
@@ -274,11 +296,23 @@ app.put('/api/organizations/:id', requireAuth, async (req, res) => {
 // Delete organization (requires admin)
 app.delete('/api/organizations/:id', requireAdmin, async (req, res) => {
   try {
-    const result = await Organization.deleteOne({ ID: req.params.id });
+    // Get organization before deleting
+    const org = await Organization.findOne({ ID: req.params.id }).lean();
     
-    if (result.deletedCount === 0) {
+    if (!org) {
       return res.status(404).json({ error: 'Organization not found' });
     }
+    
+    // Save deletion to history
+    await saveVersion(
+      org.ID,
+      'deleted',
+      org,
+      null,
+      req.session.userEmail
+    );
+    
+    const result = await Organization.deleteOne({ ID: req.params.id });
     
     res.json({ 
       success: true, 
@@ -287,6 +321,83 @@ app.delete('/api/organizations/:id', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting organization:', error);
     res.status(500).json({ error: 'Failed to delete organization' });
+  }
+});
+
+// HISTORY ENDPOINTS
+
+// Get full history for an organization
+app.get('/api/organizations/:id/history', requireAuth, async (req, res) => {
+  try {
+    const history = await getHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// Get a specific version
+app.get('/api/organizations/:id/history/:version', requireAuth, async (req, res) => {
+  try {
+    const version = await getVersion(req.params.id, parseInt(req.params.version));
+    
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+    
+    res.json(version);
+  } catch (error) {
+    console.error('Error fetching version:', error);
+    res.status(500).json({ error: 'Failed to fetch version' });
+  }
+});
+
+// Rollback to a specific version (admin only)
+app.post('/api/organizations/:id/rollback/:version', requireAdmin, async (req, res) => {
+  try {
+    const targetVersion = await getVersion(req.params.id, parseInt(req.params.version));
+    
+    if (!targetVersion) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+    
+    // Get current version before rollback
+    const currentOrg = await Organization.findOne({ ID: req.params.id }).lean();
+    
+    if (!currentOrg) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    
+    // Restore the data from target version
+    const restoreData = { ...targetVersion.data };
+    delete restoreData._id;
+    delete restoreData.__v;
+    restoreData.updatedBy = req.session.userEmail;
+    
+    const updatedOrg = await Organization.findOneAndUpdate(
+      { ID: req.params.id },
+      restoreData,
+      { new: true, select: '-_id -__v' }
+    ).lean();
+    
+    // Save this rollback as a new version
+    await saveVersion(
+      updatedOrg.ID,
+      'updated',
+      updatedOrg,
+      currentOrg,
+      req.session.userEmail
+    );
+    
+    res.json({
+      success: true,
+      message: `Rolled back to version ${req.params.version}`,
+      organization: updatedOrg
+    });
+  } catch (error) {
+    console.error('Error rolling back:', error);
+    res.status(500).json({ error: 'Failed to rollback' });
   }
 });
 

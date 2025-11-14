@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit History - Climate Justice Database</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .history-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .history-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .version-badge {
+            background: #2c5f2d;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .action-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .action-created {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .action-updated {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        .action-deleted {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .changes-list {
+            margin-top: 15px;
+        }
+        .change-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .change-field {
+            font-weight: 600;
+            color: #2c5f2d;
+        }
+        .change-from {
+            color: #c62828;
+            text-decoration: line-through;
+        }
+        .change-to {
+            color: #2e7d32;
+        }
+        .rollback-btn {
+            padding: 8px 16px;
+            background: #f57c00;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .rollback-btn:hover {
+            background: #ef6c00;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #2c5f2d;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .metadata {
+            color: #666;
+            font-size: 14px;
+        }
+        .no-changes {
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container">
+        <a href="javascript:history.back()" class="back-link">← Back</a>
+        
+        <header>
+            <h1>📜 Edit History</h1>
+            <p id="orgName" class="subtitle"></p>
+        </header>
+
+        <div id="loading" class="loading">Loading history...</div>
+        <div id="historyList"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let orgId = null;
+        let isAdmin = false;
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/me`);
+                const data = await response.json();
+                
+                if (!data.authenticated) {
+                    window.location.href = '/login.html';
+                    return false;
+                }
+                
+                isAdmin = data.user.role === 'admin';
+                return true;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                window.location.href = '/login.html';
+                return false;
+            }
+        }
+
+        // Load organization and history
+        async function loadHistory() {
+            const urlParams = new URLSearchParams(window.location.search);
+            orgId = urlParams.get('id');
+            
+            if (!orgId) {
+                alert('No organization ID provided');
+                window.location.href = '/view.html';
+                return;
+            }
+            
+            try {
+                // Load organization details
+                const orgResponse = await fetch(`${API_BASE}/api/organizations/${orgId}`);
+                const org = await orgResponse.json();
+                document.getElementById('orgName').textContent = org.Name || 'Unnamed Organization';
+                
+                // Load history
+                const historyResponse = await fetch(`${API_BASE}/api/organizations/${orgId}/history`);
+                const history = await historyResponse.json();
+                
+                displayHistory(history);
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error loading history:', error);
+                alert('Failed to load history');
+            }
+        }
+
+        // Display history
+        function displayHistory(history) {
+            const container = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p>No history available</p>';
+                return;
+            }
+            
+            container.innerHTML = history.map(item => {
+                const date = new Date(item.timestamp).toLocaleString();
+                const actionClass = `action-${item.action}`;
+                const actionText = item.action.charAt(0).toUpperCase() + item.action.slice(1);
+                
+                let changesHtml = '';
+                if (item.changes && Object.keys(item.changes).length > 0) {
+                    changesHtml = `
+                        <div class="changes-list">
+                            <strong>Changes:</strong>
+                            ${Object.entries(item.changes).map(([field, change]) => `
+                                <div class="change-item">
+                                    <span class="change-field">${field}:</span><br>
+                                    <span class="change-from">${formatValue(change.from)}</span>
+                                    →
+                                    <span class="change-to">${formatValue(change.to)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else if (item.action === 'created') {
+                    changesHtml = '<p class="no-changes">Initial version</p>';
+                } else {
+                    changesHtml = '<p class="no-changes">No changes recorded</p>';
+                }
+                
+                const rollbackBtn = isAdmin && item.action !== 'deleted' ? 
+                    `<button class="rollback-btn" onclick="rollback(${item.version})">Rollback to this version</button>` : '';
+                
+                return `
+                    <div class="history-item">
+                        <div class="history-header">
+                            <div>
+                                <span class="version-badge">Version ${item.version}</span>
+                                <span class="action-badge ${actionClass}">${actionText}</span>
+                            </div>
+                            ${rollbackBtn}
+                        </div>
+                        <div class="metadata">
+                            <strong>By:</strong> ${item.changedBy} | 
+                            <strong>When:</strong> ${date}
+                        </div>
+                        ${changesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Format value for display
+        function formatValue(value) {
+            if (value === null || value === undefined || value === '') {
+                return '<em>(empty)</em>';
+            }
+            if (Array.isArray(value)) {
+                return value.length > 0 ? value.join(', ') : '<em>(empty)</em>';
+            }
+            if (typeof value === 'boolean') {
+                return value ? 'Yes' : 'No';
+            }
+            return String(value);
+        }
+
+        // Rollback to version
+        async function rollback(version) {
+            if (!confirm(`Are you sure you want to rollback to version ${version}? This will create a new version with the old data.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/organizations/${orgId}/rollback/${version}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Successfully rolled back to version ' + version);
+                    location.reload();
+                } else {
+                    throw new Error(result.error || 'Rollback failed');
+                }
+            } catch (error) {
+                console.error('Rollback error:', error);
+                alert('❌ ' + error.message);
+            }
+        }
+
+        // Initialize
+        (async () => {
+            const isAuthenticated = await checkAuth();
+            if (isAuthenticated) {
+                await loadHistory();
+            }
+        })();
+    </script>
+</body>
+</html>

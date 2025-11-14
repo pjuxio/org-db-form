@@ -96,10 +96,17 @@ function openModal(org) {
         </button>
     ` : '';
     
+    const historyButton = currentUser ? `
+        <button onclick="viewHistory()" style="padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 10px;">
+            📜 History
+        </button>
+    ` : '';
+    
     content.innerHTML = `
         <div class="modal-header">
             <h2>${org.Name || 'Unnamed Organization'}</h2>
             <div>
+                ${historyButton}
                 ${editButton}
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
@@ -246,9 +253,13 @@ document.getElementById('search').addEventListener('input', (e) => {
 // Edit organization
 function editOrganization() {
     if (!currentOrg) return;
-    
-    // Redirect to edit page with org ID
     window.location.href = `/edit.html?id=${currentOrg.ID}`;
+}
+
+// View history
+function viewHistory() {
+    if (!currentOrg) return;
+    window.location.href = `/history.html?id=${currentOrg.ID}`;
 }
 
 // Load on page load
