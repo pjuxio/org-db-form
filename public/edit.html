@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Organization - Climate Justice Database</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>✏️ Edit Organization</h1>
+            <p class="subtitle">Update organization information</p>
+        </header>
+
+        <div id="notification" class="notification"></div>
+        <div id="loading" class="loading">Loading organization...</div>
+
+        <form id="orgForm" style="display: none;">
+            <section class="form-section">
+                <h2>Basic Information</h2>
+                
+                <div class="form-group">
+                    <label for="name">Organization Name *</label>
+                    <input type="text" id="name" name="Name" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="abbreviation">Abbreviation</label>
+                        <input type="text" id="abbreviation" name="Abbreviation">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="operational-domain">Operational Domain</label>
+                        <select id="operational-domain" name="Operational Domain">
+                            <option value="">Select...</option>
+                            <option value="International / Transnational">International / Transnational</option>
+                            <option value="African Groups">African Groups</option>
+                            <option value="Caribbean Groups">Caribbean Groups</option>
+                            <option value="Women and Girls">Women and Girls</option>
+                            <option value="Youth">Youth</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="website">Website</label>
+                    <input type="url" id="website" name="Website" placeholder="https://example.org">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="Email" placeholder="contact@example.org">
+                </div>
+
+                <div class="form-group">
+                    <label for="social-media">Social Media</label>
+                    <input type="text" id="social-media" name="Social Media" placeholder="Twitter, Facebook, etc.">
+                </div>
+            </section>
+
+            <section class="form-section">
+                <h2>Location</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="country">Country</label>
+                        <input type="text" id="country" name="Country">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="City">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="state">State/Province</label>
+                        <input type="text" id="state" name="State/Province">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postal">Postal Code</label>
+                        <input type="text" id="postal" name="Postal Code">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address1">Address Line 1</label>
+                    <input type="text" id="address1" name="Address Line 1">
+                </div>
+
+                <div class="form-group">
+                    <label for="address2">Address Line 2</label>
+                    <input type="text" id="address2" name="Address Line 2">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="latitude">Latitude</label>
+                        <input type="text" id="latitude" name="Latitude" placeholder="e.g., 40.7128">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="longitude">Longitude</label>
+                        <input type="text" id="longitude" name="Longitude" placeholder="e.g., -74.0060">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="region">Region (select multiple)</label>
+                    <select id="region" name="Region" multiple size="8">
+                        <option value="Africa">Africa</option>
+                        <option value="Asia Pacific">Asia Pacific</option>
+                        <option value="Caribbean">Caribbean</option>
+                        <option value="Europe">Europe</option>
+                        <option value="Global">Global</option>
+                        <option value="Latin America">Latin America</option>
+                        <option value="MENA">MENA</option>
+                        <option value="North America">North America</option>
+                    </select>
+                    <small>Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="locations-countries">Locations/Countries</label>
+                    <input type="text" id="locations-countries" name="Locations/Countries" placeholder="e.g., Kenya, Uganda, Tanzania">
+                </div>
+
+                <div class="form-group">
+                    <label for="scope">Scope</label>
+                    <input type="text" id="scope" name="Scope" placeholder="e.g., Global, Regional, National">
+                </div>
+            </section>
+
+            <section class="form-section">
+                <h2>Organization Details</h2>
+
+                <div class="form-group">
+                    <label for="overview">Overview *</label>
+                    <textarea id="overview" name="Overview" rows="4" required placeholder="Brief description of the organization..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="key-activities">Key Activities</label>
+                    <textarea id="key-activities" name="Key Activities" rows="4" placeholder="Main activities and initiatives..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="focus">Focus Areas (one per line)</label>
+                    <textarea id="focus" name="Focus" rows="3" placeholder="Climate Justice&#10;Environmental Advocacy&#10;Community Resilience"></textarea>
+                    <small>Enter each focus area on a new line</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="Notes" rows="2" placeholder="Additional notes..."></textarea>
+                </div>
+            </section>
+
+            <section class="form-section">
+                <h2>Review Status</h2>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="flagged" name="Flagged for Review">
+                        Flag this entry for review
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="flag-reason">Flag Reason</label>
+                    <input type="text" id="flag-reason" name="Flag Reason" placeholder="e.g., Missing website, Incomplete information">
+                </div>
+            </section>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <a href="view.html" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="edit.js"></script>
+</body>
+</html>

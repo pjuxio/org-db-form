@@ -5,21 +5,30 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "create-user": "node create-user.js"
   },
   "engines": {
     "node": "18.x"
   },
-  "keywords": ["climate", "justice", "database", "form"],
+  "keywords": [
+    "climate",
+    "justice",
+    "database",
+    "form"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "uuid": "^9.0.1",
+    "bcrypt": "^6.0.0",
     "body-parser": "^1.20.2",
+    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.18.2",
     "mongoose": "^8.0.0",
-    "dotenv": "^16.3.1"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

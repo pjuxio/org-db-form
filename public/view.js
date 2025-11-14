@@ -1,5 +1,44 @@
 const API_BASE = window.location.origin;
 let allOrganizations = [];
+let currentUser = null;
+let currentOrg = null;
+
+// Check authentication status
+async function checkAuth() {
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/me`);
+        const data = await response.json();
+        
+        const authSection = document.getElementById('authSection');
+        
+        if (data.authenticated) {
+            currentUser = data.user;
+            authSection.innerHTML = `
+                <div style="font-size: 14px; color: #666;">
+                    <span>👤 ${data.user.name} (${data.user.role})</span>
+                    <button onclick="logout()" style="margin-left: 10px; padding: 5px 15px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
+                </div>
+            `;
+        } else {
+            authSection.innerHTML = `
+                <a href="/login.html" style="padding: 8px 20px; background: #2c5f2d; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">Login</a>
+            `;
+        }
+    } catch (error) {
+        console.error('Error checking auth:', error);
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
+        window.location.reload();
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('Failed to logout');
+    }
+}
 
 // Load and display organizations
 async function loadOrganizations() {
@@ -47,13 +86,23 @@ function displayOrganizations(organizations) {
 
 // Modal functions
 function openModal(org) {
+    currentOrg = org;
     const modal = document.getElementById('orgModal');
     const content = document.getElementById('modalContent');
+    
+    const editButton = currentUser ? `
+        <button onclick="editOrganization()" style="padding: 10px 20px; background: #2c5f2d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 10px;">
+            ✏️ Edit
+        </button>
+    ` : '';
     
     content.innerHTML = `
         <div class="modal-header">
             <h2>${org.Name || 'Unnamed Organization'}</h2>
-            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div>
+                ${editButton}
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
         </div>
         <div class="modal-body">
             ${renderField('ID', org.ID)}
@@ -194,5 +243,14 @@ document.getElementById('search').addEventListener('input', (e) => {
     updateStats(filtered);
 });
 
+// Edit organization
+function editOrganization() {
+    if (!currentOrg) return;
+    
+    // Redirect to edit page with org ID
+    window.location.href = `/edit.html?id=${currentOrg.ID}`;
+}
+
 // Load on page load
+checkAuth();
 loadOrganizations();

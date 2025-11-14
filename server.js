@@ -3,7 +3,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const { v4: uuidv4 } = require('uuid');
+const User = require('./models/User');
+const { requireAuth, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,7 +52,9 @@ const organizationSchema = new mongoose.Schema({
   Email: String,
   "Social Media": String,
   Notes: String,
-  "Empty Org?": String
+  "Empty Org?": String,
+  createdBy: String,  // Email of user who created the record
+  updatedBy: String   // Email of user who last updated the record
 }, { 
   collection: 'organizations',
   timestamps: true 
@@ -60,9 +66,99 @@ const Organization = mongoose.model('Organization', organizationSchema);
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({ 
+    mongoUrl: process.env.MONGODB_URI,
+    touchAfter: 24 * 3600 // lazy session update
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production' // HTTPS only in production
+  }
+}));
+
 app.use(express.static('public'));
 
-// Routes
+// AUTH ROUTES
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user || !user.active) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Set session
+    req.session.userId = user._id;
+    req.session.userEmail = user.email;
+    req.session.userName = user.name;
+    req.session.userRole = user.role;
+
+    res.json({ 
+      success: true,
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Check auth status
+app.get('/api/auth/me', (req, res) => {
+  if (req.session && req.session.userId) {
+    res.json({
+      authenticated: true,
+      user: {
+        email: req.session.userEmail,
+        name: req.session.userName,
+        role: req.session.userRole
+      }
+    });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+// ORGANIZATION ROUTES
 
 // Get all organizations (returns JSON array)
 app.get('/api/organizations', async (req, res) => {
@@ -90,7 +186,7 @@ app.get('/api/organizations/:id', async (req, res) => {
   }
 });
 
-// Create new organization
+// Create new organization (authentication optional for backwards compatibility)
 app.post('/api/organizations', async (req, res) => {
   try {
     const orgData = {
@@ -118,7 +214,8 @@ app.post('/api/organizations', async (req, res) => {
       Email: req.body.Email || '',
       "Social Media": req.body["Social Media"] || '',
       Notes: req.body.Notes || '',
-      "Empty Org?": req.body["Empty Org?"] || ''
+      "Empty Org?": req.body["Empty Org?"] || '',
+      createdBy: req.session?.userEmail || 'anonymous'
     };
     
     const newOrg = new Organization(orgData);
@@ -142,17 +239,21 @@ app.post('/api/organizations', async (req, res) => {
   }
 });
 
-// Update organization
-app.put('/api/organizations/:id', async (req, res) => {
+// Update organization (requires authentication)
+app.put('/api/organizations/:id', requireAuth, async (req, res) => {
   try {
     const updateData = { ...req.body };
     delete updateData.ID; // Don't allow ID changes
     delete updateData._id;
+    delete updateData.createdBy; // Don't allow changing creator
+    
+    // Add who updated it
+    updateData.updatedBy = req.session.userEmail;
     
     const org = await Organization.findOneAndUpdate(
       { ID: req.params.id },
       updateData,
-      { new: true, select: '-_id -__v -createdAt -updatedAt' }
+      { new: true, select: '-_id -__v' }
     ).lean();
     
     if (!org) {
@@ -170,8 +271,8 @@ app.put('/api/organizations/:id', async (req, res) => {
   }
 });
 
-// Delete organization
-app.delete('/api/organizations/:id', async (req, res) => {
+// Delete organization (requires admin)
+app.delete('/api/organizations/:id', requireAdmin, async (req, res) => {
   try {
     const result = await Organization.deleteOne({ ID: req.params.id });
     
