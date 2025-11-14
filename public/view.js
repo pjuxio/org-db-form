@@ -28,11 +28,11 @@ function displayOrganizations(organizations) {
     }
     
     grid.innerHTML = organizations.map(org => `
-        <div class="org-card">
+        <div class="org-card" onclick='openModal(${JSON.stringify(org).replace(/'/g, "&apos;")})'>
             <h3>${org.Name || 'Unnamed Organization'}</h3>
             ${org.Abbreviation ? `<p><strong>Abbreviation:</strong> ${org.Abbreviation}</p>` : ''}
             ${org.Country ? `<p><strong>Country:</strong> ${org.Country}</p>` : ''}
-            ${org.Website ? `<p><a href="${org.Website}" target="_blank" class="website">🔗 Website</a></p>` : ''}
+            ${org.Website ? `<p><a href="${org.Website}" target="_blank" class="website" onclick="event.stopPropagation()">🔗 Website</a></p>` : ''}
             ${org.Overview ? `<p class="overview">${truncate(org.Overview, 150)}</p>` : ''}
             ${org.Region && org.Region.length > 0 ? `
                 <div style="margin-top: 10px;">
@@ -40,8 +40,119 @@ function displayOrganizations(organizations) {
                 </div>
             ` : ''}
             ${org['Flagged for Review'] ? '<p style="color: #d32f2f; font-weight: 600; margin-top: 10px;">⚠️ Flagged for Review</p>' : ''}
+            <button class="view-details-btn" onclick="event.stopPropagation(); openModal(${JSON.stringify(org).replace(/'/g, "&apos;")})">View Full Details</button>
         </div>
     `).join('');
+}
+
+// Modal functions
+function openModal(org) {
+    const modal = document.getElementById('orgModal');
+    const content = document.getElementById('modalContent');
+    
+    content.innerHTML = `
+        <div class="modal-header">
+            <h2>${org.Name || 'Unnamed Organization'}</h2>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            ${renderField('ID', org.ID)}
+            ${renderField('Abbreviation', org.Abbreviation)}
+            ${renderField('Operational Domain', org['Operational Domain'])}
+            ${renderField('Scope', org.Scope)}
+            ${renderField('Website', org.Website, true)}
+            ${renderField('Email', org.Email)}
+            ${renderField('Social Media', org['Social Media'])}
+            
+            <h3 class="section-title">Location</h3>
+            ${renderField('Country', org.Country)}
+            ${renderField('City', org.City)}
+            ${renderField('State/Province', org['State/Province'])}
+            ${renderField('Postal Code', org['Postal Code'])}
+            ${renderField('Address Line 1', org['Address Line 1'])}
+            ${renderField('Address Line 2', org['Address Line 2'])}
+            ${renderField('Latitude', org.Latitude)}
+            ${renderField('Longitude', org.Longitude)}
+            ${renderArrayField('Region', org.Region)}
+            ${renderField('Locations/Countries', org['Locations/Countries'])}
+            
+            <h3 class="section-title">Organization Details</h3>
+            ${renderField('Overview', org.Overview, false, true)}
+            ${renderField('Key Activities', org['Key Activities'], false, true)}
+            ${renderArrayField('Focus', org.Focus)}
+            ${renderField('Notes', org.Notes, false, true)}
+            
+            <h3 class="section-title">Review Status</h3>
+            ${renderBooleanField('Flagged for Review', org['Flagged for Review'])}
+            ${renderField('Flag Reason', org['Flag Reason'])}
+            ${renderField('Empty Org?', org['Empty Org?'])}
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('orgModal').style.display = 'none';
+}
+
+function renderField(label, value, isLink = false, isTextarea = false) {
+    if (!value || (Array.isArray(value) && value.length === 0)) return '';
+    
+    if (isLink && value) {
+        return `
+            <div class="modal-field">
+                <strong>${label}:</strong>
+                <a href="${value}" target="_blank" rel="noopener noreferrer">${value}</a>
+            </div>
+        `;
+    }
+    
+    if (isTextarea) {
+        return `
+            <div class="modal-field">
+                <strong>${label}:</strong>
+                <div class="modal-textarea">${value}</div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="modal-field">
+            <strong>${label}:</strong> ${value}
+        </div>
+    `;
+}
+
+function renderArrayField(label, values) {
+    if (!values || values.length === 0) return '';
+    
+    return `
+        <div class="modal-field">
+            <strong>${label}:</strong>
+            <div class="modal-tags">
+                ${values.map(v => `<span class="modal-tag">${v}</span>`).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderBooleanField(label, value) {
+    const icon = value ? '✅' : '❌';
+    const text = value ? 'Yes' : 'No';
+    return `
+        <div class="modal-field">
+            <strong>${label}:</strong> ${icon} ${text}
+        </div>
+    `;
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('orgModal');
+    if (event.target === modal) {
+        closeModal();
+    }
 }
 
 // Update statistics
